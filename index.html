@@ -135,11 +135,27 @@
   .actions button:hover { border-color: var(--accent); }
   .actions button.danger { color: #fda4af; }
   .actions button.danger:hover { border-color: var(--danger); }
+
+  /* Title input */
+  #titleInput { font-size: 15px; font-weight: 600; }
+
+  /* Cat fireworks */
+  #fireworks { position: fixed; inset: 0; pointer-events: none; z-index: 100; overflow: hidden; }
+  .cat {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    animation: catfly var(--dur) cubic-bezier(0.15, 0.65, 0.4, 1) forwards;
+    will-change: transform, opacity;
+  }
+  @keyframes catfly {
+    0%   { transform: translate(-50%, -50%) translate(0, 0) rotate(0deg) scale(0.4); opacity: 1; }
+    100% { transform: translate(-50%, -50%) translate(var(--dx), var(--dy)) rotate(var(--rot)) scale(1.3); opacity: 0; }
+  }
 </style>
 </head>
 <body>
 <header>
-  <h1>🎡 Колесо фортуны</h1>
+  <h1 id="titleText">🎡 Колесо фортуны</h1>
   <p>Добавляйте сегменты, задавайте период запрета повторов и крутите.</p>
 </header>
 
@@ -163,6 +179,10 @@
   </section>
 
   <section class="card">
+    <h2>Заголовок</h2>
+    <div class="add-row">
+      <input type="text" id="titleInput" maxlength="80" />
+    </div>
     <h2>Сегменты</h2>
     <p class="hint">Каждый сегмент — один из возможных результатов.</p>
     <div class="add-row">
@@ -203,6 +223,8 @@
   </section>
 </main>
 
+<div id="fireworks"></div>
+
 <script>
 (function () {
   "use strict";
@@ -216,6 +238,7 @@
 
   function defaultState() {
     return {
+      title: "🎡 Колесо фортуны",
       segments: ["Вариант 1", "Вариант 2", "Вариант 3", "Вариант 4"],
       mode: "spins",
       spins: 2,
@@ -263,7 +286,9 @@
     resultValue: document.getElementById("resultValue"),
     historyChips: document.getElementById("historyChips"),
     clearHistory: document.getElementById("clearHistory"),
-    resetAll: document.getElementById("resetAll")
+    resetAll: document.getElementById("resetAll"),
+    titleInput: document.getElementById("titleInput"),
+    titleText: document.getElementById("titleText")
   };
 
   function escapeHtml(s) {
@@ -368,6 +393,41 @@
     showNotice._t = setTimeout(function () { el.notice.textContent = ""; }, 3500);
   }
 
+  function applyTitle() {
+    el.titleText.textContent = state.title;
+    document.title = state.title;
+  }
+
+  function celebrate() {
+    var wrap = document.querySelector(".wheel-wrap");
+    if (!wrap) return;
+    var rect = wrap.getBoundingClientRect();
+    var cx = rect.left + rect.width / 2;
+    var cy = rect.top + rect.height / 2;
+    var container = document.getElementById("fireworks");
+    var cats = ["🐱", "😺", "😸", "😹", "😻", "🙀", "😼", "😽", "🐈", "😾"];
+    for (var i = 0; i < 42; i++) {
+      var s = document.createElement("span");
+      s.className = "cat";
+      s.textContent = cats[Math.floor(Math.random() * cats.length)];
+      var ang = Math.random() * Math.PI * 2;
+      var dist = 130 + Math.random() * 360;
+      var dx = Math.cos(ang) * dist;
+      var dy = Math.sin(ang) * dist * 0.7 + 140;
+      s.style.left = cx + "px";
+      s.style.top = cy + "px";
+      s.style.fontSize = (18 + Math.random() * 28) + "px";
+      s.style.setProperty("--dx", dx.toFixed(0) + "px");
+      s.style.setProperty("--dy", dy.toFixed(0) + "px");
+      s.style.setProperty("--rot", (Math.random() * 720 - 360).toFixed(0) + "deg");
+      s.style.setProperty("--dur", (1.0 + Math.random() * 1.2).toFixed(2) + "s");
+      container.appendChild(s);
+      (function (node) {
+        setTimeout(function () { node.remove(); }, 2600);
+      })(s);
+    }
+  }
+
   function recordWin(label) {
     var now = Date.now();
     state.history.push({ label: label, ts: now });
@@ -423,6 +483,7 @@
       isSpinning = false;
       updateSpinButton();
       recordWin(pick.s);
+      celebrate();
       state.highlight = pick.i;
       renderWheel(false);
       setTimeout(function () {
@@ -471,11 +532,13 @@
   }
 
   function populateControls() {
+    el.titleInput.value = state.title;
     el.modeSelect.value = state.mode;
     el.spinsInput.value = state.spins;
     el.timeValue.value = state.timeValue;
     el.timeUnit.value = state.timeUnit;
     syncFields();
+    applyTitle();
   }
 
   function onSettingsChange() {
@@ -497,6 +560,11 @@
   el.spinsInput.addEventListener("change", onSettingsChange);
   el.timeValue.addEventListener("change", onSettingsChange);
   el.timeUnit.addEventListener("change", onSettingsChange);
+  el.titleInput.addEventListener("change", function () {
+    state.title = el.titleInput.value.trim() || "🎡 Колесо фортуны";
+    applyTitle();
+    save();
+  });
   el.clearHistory.addEventListener("click", function () {
     state.history = [];
     state.lastDrawn = {};
