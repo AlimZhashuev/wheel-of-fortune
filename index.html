@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Колесо фортуны</title>
+<style>
+  :root {
+    --bg: #0b0e1a;
+    --card: #161c2e;
+    --card-2: #1c2438;
+    --border: #2a3350;
+    --text: #e7e9f3;
+    --muted: #9aa3bd;
+    --accent: #7c5cff;
+    --accent-hover: #6a4df0;
+    --danger: #ef4444;
+    --ok: #34d399;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background: radial-gradient(1200px 700px at 50% -10%, #1a2140 0%, var(--bg) 60%);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 28px 20px 60px;
+  }
+  header { text-align: center; margin-bottom: 26px; }
+  header h1 { margin: 0; font-size: 26px; letter-spacing: .5px; }
+  header p { margin: 6px 0 0; color: var(--muted); font-size: 14px; }
+
+  main {
+    display: grid;
+    gap: 22px;
+    max-width: 960px;
+    margin: 0 auto;
+    justify-content: center;
+    grid-template-columns: 1fr;
+  }
+  @media (min-width: 820px) {
+    main { grid-template-columns: minmax(320px, 520px) minmax(300px, 400px); align-items: start; }
+  }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 18px;
+    box-shadow: 0 12px 30px rgba(0,0,0,.35);
+  }
+  .card h2 { margin: 0 0 4px; font-size: 15px; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); }
+  .hint { margin: 0 0 14px; font-size: 13px; color: var(--muted); line-height: 1.45; }
+
+  /* Wheel */
+  .wheel-col { display: flex; flex-direction: column; align-items: center; gap: 16px; }
+  .wheel-wrap { position: relative; width: 100%; max-width: 480px; }
+  .pointer {
+    position: absolute; top: -6px; left: 50%; transform: translateX(-50%);
+    width: 0; height: 0; z-index: 3;
+    border-left: 17px solid transparent;
+    border-right: 17px solid transparent;
+    border-top: 28px solid #fff;
+    filter: drop-shadow(0 3px 5px rgba(0,0,0,.55));
+  }
+  #wheelSvg { display: block; width: 100%; height: auto; user-select: none; }
+  #wheel { transform-origin: 250px 250px; will-change: transform; }
+  .hub { fill: #0f1322; stroke: var(--border); stroke-width: 2; }
+
+  .spin {
+    font-size: 18px; font-weight: 700; letter-spacing: .5px;
+    padding: 13px 38px; border: none; border-radius: 999px;
+    background: linear-gradient(135deg, var(--accent), #a855f7);
+    color: #fff; cursor: pointer;
+    box-shadow: 0 8px 22px rgba(124,92,255,.45);
+    transition: transform .1s ease, opacity .2s ease;
+  }
+  .spin:hover:not(:disabled) { transform: translateY(-1px); }
+  .spin:active:not(:disabled) { transform: translateY(0); }
+  .spin:disabled { opacity: .45; cursor: not-allowed; }
+
+  #notice { min-height: 20px; font-size: 13px; color: var(--ok); text-align: center; }
+
+  .result-card { width: 100%; text-align: center; }
+  .result-label { font-size: 12px; text-transform: uppercase; letter-spacing: .8px; color: var(--muted); }
+  .result-value { font-size: 30px; font-weight: 800; margin: 4px 0 10px; }
+  .history-chips { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+  .chip {
+    background: var(--card-2); border: 1px solid var(--border);
+    border-radius: 999px; padding: 4px 11px; font-size: 12.5px; color: var(--text);
+  }
+
+  /* Controls */
+  .add-row { display: flex; gap: 8px; margin-bottom: 14px; }
+  input[type="text"], input[type="number"], select {
+    background: var(--card-2); color: var(--text);
+    border: 1px solid var(--border); border-radius: 10px;
+    padding: 10px 12px; font-size: 14px; outline: none; width: 100%;
+  }
+  input:focus, select:focus { border-color: var(--accent); }
+  .add-row input { flex: 1; }
+  button.small {
+    background: var(--accent); color: #fff; border: none;
+    border-radius: 10px; padding: 10px 16px; cursor: pointer; font-weight: 600; white-space: nowrap;
+  }
+  button.small:hover { background: var(--accent-hover); }
+
+  #segList { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+  #segList li {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--card-2); border: 1px solid var(--border);
+    border-radius: 10px; padding: 8px 10px;
+  }
+  #segList .swatch { width: 14px; height: 14px; border-radius: 4px; flex: none; }
+  #segList .name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; }
+  #segList .lock { color: #fbbf24; font-size: 13px; flex: none; }
+  #segList .del {
+    background: transparent; border: none; color: var(--muted); cursor: pointer;
+    font-size: 16px; line-height: 1; padding: 2px 6px; border-radius: 6px;
+  }
+  #segList .del:hover { color: var(--danger); background: rgba(239,68,68,.12); }
+  #segList li.blocked .name { color: var(--muted); }
+
+  .field { margin-top: 12px; display: flex; align-items: center; gap: 10px; }
+  .field.hidden { display: none; }
+  .field label { font-size: 13px; color: var(--muted); white-space: nowrap; }
+  .time-row { display: flex; gap: 8px; flex: 1; }
+  .time-row input { width: 90px; flex: none; }
+
+  .actions { margin-top: 18px; display: flex; flex-direction: column; gap: 8px; }
+  .actions button {
+    background: var(--card-2); color: var(--text); border: 1px solid var(--border);
+    border-radius: 10px; padding: 10px; cursor: pointer; font-size: 13px;
+  }
+  .actions button:hover { border-color: var(--accent); }
+  .actions button.danger { color: #fda4af; }
+  .actions button.danger:hover { border-color: var(--danger); }
+</style>
+</head>
+<body>
+<header>
+  <h1>🎡 Колесо фортуны</h1>
+  <p>Добавляйте сегменты, задавайте период запрета повторов и крутите.</p>
+</header>
+
+<main>
+  <section class="wheel-col">
+    <div class="wheel-wrap">
+      <div class="pointer"></div>
+      <svg id="wheelSvg" viewBox="0 0 500 500">
+        <circle cx="250" cy="250" r="246" fill="none" stroke="#0d1120" stroke-width="9"></circle>
+        <g id="wheel"></g>
+        <circle cx="250" cy="250" r="24" class="hub"></circle>
+      </svg>
+    </div>
+    <button id="spinBtn" class="spin">Крутить</button>
+    <div id="notice"></div>
+    <div class="card result-card">
+      <div class="result-label">Последний результат</div>
+      <div class="result-value" id="resultValue">—</div>
+      <div class="history-chips" id="historyChips"></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Сегменты</h2>
+    <p class="hint">Каждый сегмент — один из возможных результатов.</p>
+    <div class="add-row">
+      <input type="text" id="newName" placeholder="Название сегмента" maxlength="60" />
+      <button class="small" id="addBtn">Добавить</button>
+    </div>
+    <ul id="segList"></ul>
+
+    <h2 style="margin-top:22px">Период запрета повторов</h2>
+    <p class="hint">Выпавшее значение не появится снова, пока действует период.</p>
+    <div class="field">
+      <select id="modeSelect">
+        <option value="spins">По числу спинов</option>
+        <option value="time">По времени</option>
+      </select>
+    </div>
+    <div class="field" id="spinsField">
+      <label for="spinsInput">Не повторять в течение</label>
+      <input type="number" id="spinsInput" min="0" value="2" />
+      <label for="spinsInput">следующих спинов</label>
+    </div>
+    <div class="field hidden" id="timeField">
+      <label for="timeValue">Не повторять в течение</label>
+      <div class="time-row">
+        <input type="number" id="timeValue" min="1" value="30" />
+        <select id="timeUnit">
+          <option value="min">минут</option>
+          <option value="hour">часов</option>
+          <option value="day">дней</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button id="clearHistory">Снять запреты (очистить историю)</button>
+      <button id="resetAll" class="danger">Сбросить всё</button>
+    </div>
+  </section>
+</main>
+
+<script>
+(function () {
+  "use strict";
+
+  var CX = 250, CY = 250, R = 240;
+  var PALETTE = [
+    "#ef4444", "#f97316", "#f59e0b", "#84cc16", "#22c55e", "#10b981",
+    "#06b6d4", "#3b82f6", "#8b5cf6", "#d946ef", "#ec4899", "#f43f5e"
+  ];
+  var STORAGE_KEY = "wheel-fortune-v1";
+
+  function defaultState() {
+    return {
+      segments: ["Вариант 1", "Вариант 2", "Вариант 3", "Вариант 4"],
+      mode: "spins",
+      spins: 2,
+      timeValue: 30,
+      timeUnit: "min",
+      history: [],     // [{label, ts}] последние результаты (новые в конце)
+      lastDrawn: {},   // label -> ts
+      highlight: null
+    };
+  }
+
+  function load() {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        var d = JSON.parse(raw);
+        if (d && Array.isArray(d.segments)) {
+          return Object.assign(defaultState(), d);
+        }
+      }
+    } catch (e) { /* ignore */ }
+    return defaultState();
+  }
+  function save() {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) { /* ignore */ }
+  }
+
+  var state = load();
+  var currentRotation = 0;
+  var isSpinning = false;
+
+  var el = {
+    wheel: document.getElementById("wheel"),
+    spinBtn: document.getElementById("spinBtn"),
+    notice: document.getElementById("notice"),
+    newName: document.getElementById("newName"),
+    addBtn: document.getElementById("addBtn"),
+    segList: document.getElementById("segList"),
+    modeSelect: document.getElementById("modeSelect"),
+    spinsField: document.getElementById("spinsField"),
+    timeField: document.getElementById("timeField"),
+    spinsInput: document.getElementById("spinsInput"),
+    timeValue: document.getElementById("timeValue"),
+    timeUnit: document.getElementById("timeUnit"),
+    resultValue: document.getElementById("resultValue"),
+    historyChips: document.getElementById("historyChips"),
+    clearHistory: document.getElementById("clearHistory"),
+    resetAll: document.getElementById("resetAll")
+  };
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+
+  function toRad(d) { return d * Math.PI / 180; }
+  function pt(deg, r) {
+    var a = toRad(deg);
+    return { x: CX + r * Math.sin(a), y: CY - r * Math.cos(a) };
+  }
+
+  function slicePath(i, n) {
+    var sa = i * (360 / n), ea = (i + 1) * (360 / n);
+    var p0 = pt(sa, R), p1 = pt(ea, R);
+    var large = (ea - sa) > 180 ? 1 : 0;
+    return "M " + CX + " " + CY +
+      " L " + p0.x.toFixed(2) + " " + p0.y.toFixed(2) +
+      " A " + R + " " + R + " 0 " + large + " 1 " + p1.x.toFixed(2) + " " + p1.y.toFixed(2) +
+      " Z";
+  }
+
+  function shortLabel(s) { return s.length > 16 ? s.slice(0, 15) + "…" : s; }
+
+  function timeToMs() {
+    var v = Math.max(1, parseInt(state.timeValue, 10) || 1);
+    var unit = { min: 60000, hour: 3600000, day: 86400000 }[state.timeUnit] || 60000;
+    return v * unit;
+  }
+
+  function blockedLabels() {
+    var set = {};
+    var now = Date.now();
+    if (state.mode === "spins") {
+      var n = Math.max(0, parseInt(state.spins, 10) || 0);
+      var recent = state.history.slice(-n);
+      for (var i = 0; i < recent.length; i++) set[recent[i].label] = true;
+    } else {
+      var ms = timeToMs();
+      for (var label in state.lastDrawn) {
+        if (now - state.lastDrawn[label] < ms) set[label] = true;
+      }
+    }
+    return set;
+  }
+
+  function renderWheel(reset) {
+    var n = state.segments.length;
+    var blocked = blockedLabels();
+    var fontSize = n > 10 ? 11 : (n > 6 ? 14 : 17);
+    var labelR = n > 10 ? R * 0.78 : R * 0.66;
+    var html = "";
+    for (var i = 0; i < n; i++) {
+      var color = PALETTE[i % PALETTE.length];
+      var mid = i * (360 / n) + (180 / n);
+      var lp = pt(mid, labelR);
+      var hl = state.highlight === i;
+      html += '<path d="' + slicePath(i, n) + '" fill="' + color + '" stroke="' +
+        (hl ? "#ffffff" : "rgba(255,255,255,0.22)") + '" stroke-width="' + (hl ? 5 : 1.5) + '"></path>';
+      html += '<text x="' + lp.x.toFixed(1) + '" y="' + lp.y.toFixed(1) + '" font-size="' + fontSize +
+        '" text-anchor="middle" dominant-baseline="middle" fill="#ffffff" font-weight="600" ' +
+        'stroke="rgba(0,0,0,0.28)" stroke-width="3" paint-order="stroke">' +
+        "<title>" + escapeHtml(state.segments[i]) + "</title>" + escapeHtml(shortLabel(state.segments[i])) + "</text>";
+    }
+    el.wheel.innerHTML = html;
+    if (reset) {
+      currentRotation = 0;
+      el.wheel.style.transition = "none";
+      el.wheel.style.transform = "rotate(0deg)";
+      void el.wheel.getBoundingClientRect();
+      el.wheel.style.transition = "";
+    }
+    renderSegList(blocked);
+    updateSpinButton();
+  }
+
+  function renderSegList(blocked) {
+    blocked = blocked || blockedLabels();
+    var html = "";
+    for (var i = 0; i < state.segments.length; i++) {
+      var name = state.segments[i];
+      var isBlocked = !!blocked[name];
+      html += '<li class="' + (isBlocked ? "blocked" : "") + '">' +
+        '<span class="swatch" style="background:' + PALETTE[i % PALETTE.length] + '"></span>' +
+        '<span class="name">' + escapeHtml(name) + "</span>" +
+        (isBlocked ? '<span class="lock" title="В периоде запрета">🔒</span>' : "") +
+        '<button class="del" data-index="' + i + '" title="Удалить">✕</button>' +
+        "</li>";
+    }
+    el.segList.innerHTML = html;
+  }
+
+  function updateSpinButton() {
+    el.spinBtn.disabled = isSpinning || state.segments.length < 2;
+  }
+
+  function showNotice(msg) {
+    el.notice.textContent = msg;
+    clearTimeout(showNotice._t);
+    showNotice._t = setTimeout(function () { el.notice.textContent = ""; }, 3500);
+  }
+
+  function recordWin(label) {
+    var now = Date.now();
+    state.history.push({ label: label, ts: now });
+    if (state.history.length > 100) state.history = state.history.slice(-100);
+    state.lastDrawn[label] = now;
+    save();
+    renderResult();
+  }
+
+  function renderResult() {
+    var last = state.history[state.history.length - 1];
+    el.resultValue.textContent = last ? last.label : "—";
+    var chips = state.history.slice(-8).reverse();
+    el.historyChips.innerHTML = chips.map(function (h) {
+      return '<span class="chip">' + escapeHtml(h.label) + "</span>";
+    }).join("");
+  }
+
+  function spin() {
+    if (isSpinning) return;
+    var n = state.segments.length;
+    if (n < 2) { showNotice("Добавьте минимум два сегмента"); return; }
+
+    var blocked = blockedLabels();
+    var pool = [];
+    for (var i = 0; i < n; i++) {
+      if (!blocked[state.segments[i]]) pool.push({ s: state.segments[i], i: i });
+    }
+    var fallback = false;
+    if (pool.length === 0) {
+      for (i = 0; i < n; i++) pool.push({ s: state.segments[i], i: i });
+      fallback = true;
+    }
+    var pick = pool[Math.floor(Math.random() * pool.length)];
+
+    var sliceAngle = 360 / n;
+    var mid = (pick.i + 0.5) * sliceAngle;
+    var curMod = ((currentRotation % 360) + 360) % 360;
+    var delta = (360 - ((curMod + mid) % 360)) % 360;
+    delta += (Math.random() - 0.5) * sliceAngle * 0.7;
+    var finalRotation = currentRotation + 5 * 360 + delta;
+
+    isSpinning = true;
+    updateSpinButton();
+    el.wheel.style.transition = "transform 4.2s cubic-bezier(0.15, 0.75, 0.15, 1)";
+    el.wheel.style.transform = "rotate(" + finalRotation + "deg)";
+    currentRotation = finalRotation;
+
+    var finished = false;
+    function finish() {
+      if (finished) return;
+      finished = true;
+      isSpinning = false;
+      updateSpinButton();
+      recordWin(pick.s);
+      state.highlight = pick.i;
+      renderWheel(false);
+      setTimeout(function () {
+        state.highlight = null;
+        renderWheel(false);
+      }, 2500);
+      if (fallback) showNotice("Все значения в периоде запрета — выпало без ограничения");
+    }
+    el.wheel.addEventListener("transitionend", finish, { once: true });
+    setTimeout(function () { finish(); }, 4700);
+  }
+
+  function addSegment() {
+    var name = el.newName.value.trim();
+    if (!name) return;
+    var lower = name.toLowerCase();
+    for (var i = 0; i < state.segments.length; i++) {
+      if (state.segments[i].toLowerCase() === lower) {
+        showNotice("Такой сегмент уже есть");
+        return;
+      }
+    }
+    state.segments.push(name);
+    el.newName.value = "";
+    save();
+    renderWheel(true);
+  }
+
+  function removeSegment(index) {
+    state.segments.splice(index, 1);
+    save();
+    renderWheel(true);
+  }
+
+  function readSettings() {
+    state.mode = el.modeSelect.value;
+    state.spins = Math.max(0, parseInt(el.spinsInput.value, 10) || 0);
+    state.timeValue = Math.max(1, parseInt(el.timeValue.value, 10) || 1);
+    state.timeUnit = el.timeUnit.value;
+  }
+
+  function syncFields() {
+    var time = state.mode === "time";
+    el.spinsField.classList.toggle("hidden", time);
+    el.timeField.classList.toggle("hidden", !time);
+  }
+
+  function populateControls() {
+    el.modeSelect.value = state.mode;
+    el.spinsInput.value = state.spins;
+    el.timeValue.value = state.timeValue;
+    el.timeUnit.value = state.timeUnit;
+    syncFields();
+  }
+
+  function onSettingsChange() {
+    readSettings();
+    save();
+    renderWheel(false);
+  }
+
+  el.addBtn.addEventListener("click", addSegment);
+  el.newName.addEventListener("keydown", function (e) {
+    if (e.key === "Enter") addSegment();
+  });
+  el.segList.addEventListener("click", function (e) {
+    var btn = e.target.closest(".del");
+    if (btn) removeSegment(parseInt(btn.getAttribute("data-index"), 10));
+  });
+  el.spinBtn.addEventListener("click", spin);
+  el.modeSelect.addEventListener("change", onSettingsChange);
+  el.spinsInput.addEventListener("change", onSettingsChange);
+  el.timeValue.addEventListener("change", onSettingsChange);
+  el.timeUnit.addEventListener("change", onSettingsChange);
+  el.clearHistory.addEventListener("click", function () {
+    state.history = [];
+    state.lastDrawn = {};
+    save();
+    renderWheel(false);
+    renderResult();
+    showNotice("История очищена, запреты сняты");
+  });
+  el.resetAll.addEventListener("click", function () {
+    if (!confirm("Удалить все сегменты, настройки и историю?")) return;
+    try { localStorage.removeItem(STORAGE_KEY); } catch (e) { /* ignore */ }
+    state = defaultState();
+    populateControls();
+    renderWheel(true);
+    renderResult();
+  });
+
+  populateControls();
+  renderWheel(true);
+  renderResult();
+})();
+</script>
+</body>
+</html>

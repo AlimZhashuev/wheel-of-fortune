@@ -1,0 +1,13 @@
+# Публикация статического сайта (колесо фортуны) через GitLab Pages.
+# После пуша в master сайт станет доступен по адресу из Settings → Pages.
+
+pages:
+  stage: deploy
+  script:
+    - mkdir -p public
+    - cp index.html public/index.html
+  artifacts:
+    paths:
+      - public
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "master"'
