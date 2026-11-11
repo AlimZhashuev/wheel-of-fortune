@@ -83,12 +83,7 @@
 
   .result-card { width: 100%; text-align: center; }
   .result-label { font-size: 12px; text-transform: uppercase; letter-spacing: .8px; color: var(--muted); }
-  .result-value { font-size: 30px; font-weight: 800; margin: 4px 0 10px; }
-  .history-chips { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
-  .chip {
-    background: var(--card-2); border: 1px solid var(--border);
-    border-radius: 999px; padding: 4px 11px; font-size: 12.5px; color: var(--text);
-  }
+  .result-value { font-size: 26px; font-weight: 800; margin-top: 4px; line-height: 1.25; }
 
   /* Controls */
   .add-row { display: flex; gap: 8px; margin-bottom: 14px; }
@@ -113,19 +108,13 @@
   }
   #segList .swatch { width: 14px; height: 14px; border-radius: 4px; flex: none; }
   #segList .name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; }
-  #segList .lock { color: #fbbf24; font-size: 13px; flex: none; }
   #segList .del {
     background: transparent; border: none; color: var(--muted); cursor: pointer;
     font-size: 16px; line-height: 1; padding: 2px 6px; border-radius: 6px;
   }
   #segList .del:hover { color: var(--danger); background: rgba(239,68,68,.12); }
-  #segList li.blocked .name { color: var(--muted); }
 
-  .field { margin-top: 12px; display: flex; align-items: center; gap: 10px; }
-  .field.hidden { display: none; }
-  .field label { font-size: 13px; color: var(--muted); white-space: nowrap; }
-  .time-row { display: flex; gap: 8px; flex: 1; }
-  .time-row input { width: 90px; flex: none; }
+  #titleInput { font-size: 15px; font-weight: 600; }
 
   .actions { margin-top: 18px; display: flex; flex-direction: column; gap: 8px; }
   .actions button {
@@ -136,27 +125,25 @@
   .actions button.danger { color: #fda4af; }
   .actions button.danger:hover { border-color: var(--danger); }
 
-  /* Title input */
-  #titleInput { font-size: 15px; font-weight: 600; }
-
   /* Cat fireworks */
   #fireworks { position: fixed; inset: 0; pointer-events: none; z-index: 100; overflow: hidden; }
   .cat {
     position: absolute;
     transform: translate(-50%, -50%);
-    animation: catfly var(--dur) cubic-bezier(0.15, 0.65, 0.4, 1) forwards;
+    animation: catfly var(--dur) cubic-bezier(0.2, 0.6, 0.35, 1) forwards;
     will-change: transform, opacity;
   }
   @keyframes catfly {
-    0%   { transform: translate(-50%, -50%) translate(0, 0) rotate(0deg) scale(0.4); opacity: 1; }
-    100% { transform: translate(-50%, -50%) translate(var(--dx), var(--dy)) rotate(var(--rot)) scale(1.3); opacity: 0; }
+    0%   { transform: translate(-50%, -50%) translate(0, 0) rotate(0deg) scale(0.3); opacity: 1; }
+    50%  { transform: translate(-50%, -50%) translate(var(--midx), var(--peak)) rotate(var(--midrot)) scale(1.15); opacity: 1; }
+    100% { transform: translate(-50%, -50%) translate(var(--dx), var(--y)) rotate(var(--rot)) scale(1.35); opacity: 0; }
   }
 </style>
 </head>
 <body>
 <header>
   <h1 id="titleText">🎡 Колесо фортуны</h1>
-  <p>Добавляйте сегменты, задавайте период запрета повторов и крутите.</p>
+  <p>Крутите колесо — выпадет ведущий дня.</p>
 </header>
 
 <main>
@@ -172,9 +159,8 @@
     <button id="spinBtn" class="spin">Крутить</button>
     <div id="notice"></div>
     <div class="card result-card">
-      <div class="result-label">Последний результат</div>
-      <div class="result-value" id="resultValue">—</div>
-      <div class="history-chips" id="historyChips"></div>
+      <div class="result-label">Результат</div>
+      <div class="result-value" id="resultValue">Крутите колесо</div>
     </div>
   </section>
 
@@ -183,41 +169,15 @@
     <div class="add-row">
       <input type="text" id="titleInput" maxlength="80" />
     </div>
-    <h2>Сегменты</h2>
-    <p class="hint">Каждый сегмент — один из возможных результатов.</p>
+    <h2>Участники</h2>
+    <p class="hint">Список в порядке ротации — каждый ведёт ровно один раз за круг.</p>
     <div class="add-row">
-      <input type="text" id="newName" placeholder="Название сегмента" maxlength="60" />
+      <input type="text" id="newName" placeholder="Имя участника" maxlength="60" />
       <button class="small" id="addBtn">Добавить</button>
     </div>
     <ul id="segList"></ul>
 
-    <h2 style="margin-top:22px">Период запрета повторов</h2>
-    <p class="hint">Выпавшее значение не появится снова, пока действует период.</p>
-    <div class="field">
-      <select id="modeSelect">
-        <option value="spins">По числу спинов</option>
-        <option value="time">По времени</option>
-      </select>
-    </div>
-    <div class="field" id="spinsField">
-      <label for="spinsInput">Не повторять в течение</label>
-      <input type="number" id="spinsInput" min="0" value="2" />
-      <label for="spinsInput">следующих спинов</label>
-    </div>
-    <div class="field hidden" id="timeField">
-      <label for="timeValue">Не повторять в течение</label>
-      <div class="time-row">
-        <input type="number" id="timeValue" min="1" value="30" />
-        <select id="timeUnit">
-          <option value="min">минут</option>
-          <option value="hour">часов</option>
-          <option value="day">дней</option>
-        </select>
-      </div>
-    </div>
-
     <div class="actions">
-      <button id="clearHistory">Снять запреты (очистить историю)</button>
       <button id="resetAll" class="danger">Сбросить всё</button>
     </div>
   </section>
@@ -234,26 +194,25 @@
     "#ef4444", "#f97316", "#f59e0b", "#84cc16", "#22c55e", "#10b981",
     "#06b6d4", "#3b82f6", "#8b5cf6", "#d946ef", "#ec4899", "#f43f5e"
   ];
-  var STORAGE_KEY = "wheel-fortune-v3";
+  var STORAGE_KEY = "wheel-fortune-v4";
+
+  // Порядок ротации: Алим (пн 2026-11-09) -> Яна (ср) -> ... дальше по кругу.
+  var DEFAULT_SEGMENTS = [
+    "Алим Жашуев", "Яна Елисеева", "Александр Романенко", "Леонид Зарков",
+    "Егор Шостак", "Данила Дерявко", "Федор Павличенко", "Андрей Ружанский",
+    "Николай Климачев", "Владимир Скаринов", "Михаил Бахов", "Александр Шмаков",
+    "Дмитрий Добрецков", "Данила Пачев", "Павел Муханов", "Александр Пеньков"
+  ];
+
+  // Дейли: понедельник, среда, пятница.
+  var DAILY_DAYS = { 1: true, 3: true, 5: true };
+  var DAY_LABEL = { 1: "понедельник", 3: "среду", 5: "пятницу" };
+  var EPOCH = new Date(2026, 10, 9); // понедельник 2026-11-09 = Алим (index 0)
 
   function defaultState() {
     return {
       title: "🎡 Колесо фортуны",
-      segments: [
-        "Александр Романенко", "Павел Муханов", "Николай Климачев",
-        "Федор Павличенко", "Михаил Бахов", "Яна Елисеева",
-        "Егор Шостак", "Дмитрий Добрецков", "Алим Жашуев",
-        "Леонид Зарков", "Данила Дерявко",
-        "Владимир Скаринов", "Александр Пеньков",
-        "Андрей Ружанский", "Александр Шмаков", "Данила Пачев"
-      ],
-      mode: "spins",
-      spins: 16,
-      timeValue: 30,
-      timeUnit: "min",
-      history: [],     // [{label, ts}] последние результаты (новые в конце)
-      lastDrawn: {},   // label -> ts
-      highlight: null
+      segments: DEFAULT_SEGMENTS.slice()
     };
   }
 
@@ -262,8 +221,8 @@
       var raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
         var d = JSON.parse(raw);
-        if (d && Array.isArray(d.segments)) {
-          return Object.assign(defaultState(), d);
+        if (d && Array.isArray(d.segments) && d.segments.length) {
+          return { title: d.title || defaultState().title, segments: d.segments };
         }
       }
     } catch (e) { /* ignore */ }
@@ -276,6 +235,7 @@
   var state = load();
   var currentRotation = 0;
   var isSpinning = false;
+  var highlightIndex = null;
 
   var el = {
     wheel: document.getElementById("wheel"),
@@ -284,18 +244,10 @@
     newName: document.getElementById("newName"),
     addBtn: document.getElementById("addBtn"),
     segList: document.getElementById("segList"),
-    modeSelect: document.getElementById("modeSelect"),
-    spinsField: document.getElementById("spinsField"),
-    timeField: document.getElementById("timeField"),
-    spinsInput: document.getElementById("spinsInput"),
-    timeValue: document.getElementById("timeValue"),
-    timeUnit: document.getElementById("timeUnit"),
     resultValue: document.getElementById("resultValue"),
-    historyChips: document.getElementById("historyChips"),
-    clearHistory: document.getElementById("clearHistory"),
-    resetAll: document.getElementById("resetAll"),
     titleInput: document.getElementById("titleInput"),
-    titleText: document.getElementById("titleText")
+    titleText: document.getElementById("titleText"),
+    resetAll: document.getElementById("resetAll")
   };
 
   function escapeHtml(s) {
@@ -322,34 +274,44 @@
 
   function shortLabel(s) { return s.length > 16 ? s.slice(0, 15) + "…" : s; }
 
-  function timeToMs() {
-    var v = Math.max(1, parseInt(state.timeValue, 10) || 1);
-    var unit = { min: 60000, hour: 3600000, day: 86400000 }[state.timeUnit] || 60000;
-    return v * unit;
+  // --- Дата и ротация ---
+  function getTargetDate() {
+    // Если сегодня дейли (Пн/Ср/Пт) — берём сегодня; иначе ближайший следующий дейли.
+    var now = new Date();
+    var offset = { 0: 1, 1: 0, 2: 1, 3: 0, 4: 1, 5: 0, 6: 2 }[now.getDay()];
+    return new Date(now.getFullYear(), now.getMonth(), now.getDate() + offset);
   }
 
-  function blockedLabels() {
-    var set = {};
-    var now = Date.now();
-    if (state.mode === "spins") {
-      var n = Math.max(0, parseInt(state.spins, 10) || 0);
-      // Нельзя заблокировать больше, чем сегментов-1: всегда остаётся хотя бы один доступный.
-      var maxN = Math.max(0, state.segments.length - 1);
-      if (n > maxN) n = maxN;
-      var recent = state.history.slice(-n);
-      for (var i = 0; i < recent.length; i++) set[recent[i].label] = true;
-    } else {
-      var ms = timeToMs();
-      for (var label in state.lastDrawn) {
-        if (now - state.lastDrawn[label] < ms) set[label] = true;
-      }
+  function dailyIndex(date) {
+    // Сколько дейли (Пн/Ср/Пт) прошло после EPOCH (не включая его) до date включительно.
+    var count = 0;
+    var d = new Date(EPOCH);
+    d.setDate(d.getDate() + 1);
+    while (d.getTime() <= date.getTime()) {
+      if (DAILY_DAYS[d.getDay()]) count++;
+      d.setDate(d.getDate() + 1);
     }
-    return set;
+    return count;
   }
 
+  function currentWinner() {
+    var date = getTargetDate();
+    var idx = dailyIndex(date) % state.segments.length;
+    return {
+      name: state.segments[idx],
+      index: idx,
+      dayLabel: DAY_LABEL[date.getDay()]
+    };
+  }
+
+  function caption() {
+    var w = currentWinner();
+    return "Ведущий на " + w.dayLabel + " " + w.name;
+  }
+
+  // --- Отрисовка ---
   function renderWheel(reset) {
     var n = state.segments.length;
-    var blocked = blockedLabels();
     var fontSize = n > 10 ? 11 : (n > 6 ? 14 : 17);
     var labelR = n > 10 ? R * 0.78 : R * 0.66;
     var html = "";
@@ -357,7 +319,7 @@
       var color = PALETTE[i % PALETTE.length];
       var mid = i * (360 / n) + (180 / n);
       var lp = pt(mid, labelR);
-      var hl = state.highlight === i;
+      var hl = highlightIndex === i;
       html += '<path d="' + slicePath(i, n) + '" fill="' + color + '" stroke="' +
         (hl ? "#ffffff" : "rgba(255,255,255,0.22)") + '" stroke-width="' + (hl ? 5 : 1.5) + '"></path>';
       html += '<text x="' + lp.x.toFixed(1) + '" y="' + lp.y.toFixed(1) + '" font-size="' + fontSize +
@@ -373,20 +335,16 @@
       void el.wheel.getBoundingClientRect();
       el.wheel.style.transition = "";
     }
-    renderSegList(blocked);
+    renderSegList();
     updateSpinButton();
   }
 
-  function renderSegList(blocked) {
-    blocked = blocked || blockedLabels();
+  function renderSegList() {
     var html = "";
     for (var i = 0; i < state.segments.length; i++) {
-      var name = state.segments[i];
-      var isBlocked = !!blocked[name];
-      html += '<li class="' + (isBlocked ? "blocked" : "") + '">' +
+      html += '<li>' +
         '<span class="swatch" style="background:' + PALETTE[i % PALETTE.length] + '"></span>' +
-        '<span class="name">' + escapeHtml(name) + "</span>" +
-        (isBlocked ? '<span class="lock" title="В периоде запрета">🔒</span>' : "") +
+        '<span class="name">' + escapeHtml(state.segments[i]) + "</span>" +
         '<button class="del" data-index="' + i + '" title="Удалить">✕</button>' +
         "</li>";
     }
@@ -408,6 +366,7 @@
     document.title = state.title;
   }
 
+  // --- Фонтан из котиков ---
   function celebrate() {
     var wrap = document.querySelector(".wheel-wrap");
     if (!wrap) return;
@@ -416,78 +375,46 @@
     var cy = rect.top + rect.height / 2;
     var container = document.getElementById("fireworks");
     var cats = ["🐱", "😺", "😸", "😹", "😻", "🙀", "😼", "😽", "🐈", "😾"];
-    for (var i = 0; i < 42; i++) {
+    var count = 90;
+    for (var i = 0; i < count; i++) {
       var s = document.createElement("span");
       s.className = "cat";
       s.textContent = cats[Math.floor(Math.random() * cats.length)];
       var ang = Math.random() * Math.PI * 2;
-      var dist = 130 + Math.random() * 360;
+      var dist = 90 + Math.random() * 340;
       var dx = Math.cos(ang) * dist;
-      var dy = Math.sin(ang) * dist * 0.7 + 140;
+      var peak = -(150 + Math.random() * 320);
+      var y = 100 + Math.random() * 380;
+      var rot = Math.random() * 720 - 360;
       s.style.left = cx + "px";
       s.style.top = cy + "px";
-      s.style.fontSize = (18 + Math.random() * 28) + "px";
+      s.style.fontSize = (18 + Math.random() * 30) + "px";
       s.style.setProperty("--dx", dx.toFixed(0) + "px");
-      s.style.setProperty("--dy", dy.toFixed(0) + "px");
-      s.style.setProperty("--rot", (Math.random() * 720 - 360).toFixed(0) + "deg");
-      s.style.setProperty("--dur", (1.0 + Math.random() * 1.2).toFixed(2) + "s");
+      s.style.setProperty("--midx", (dx * 0.55).toFixed(0) + "px");
+      s.style.setProperty("--peak", peak.toFixed(0) + "px");
+      s.style.setProperty("--y", y.toFixed(0) + "px");
+      s.style.setProperty("--rot", rot.toFixed(0) + "deg");
+      s.style.setProperty("--midrot", (rot * 0.6).toFixed(0) + "deg");
+      s.style.setProperty("--dur", (1.3 + Math.random() * 1.2).toFixed(2) + "s");
       container.appendChild(s);
       (function (node) {
-        setTimeout(function () { node.remove(); }, 2600);
+        setTimeout(function () { node.remove(); }, 2800);
       })(s);
     }
   }
 
-  function recordWin(label) {
-    var now = Date.now();
-    state.history.push({ label: label, ts: now });
-    if (state.history.length > 100) state.history = state.history.slice(-100);
-    state.lastDrawn[label] = now;
-    save();
-    renderResult();
-  }
-
-  function renderResult() {
-    var last = state.history[state.history.length - 1];
-    el.resultValue.textContent = last ? last.label : "—";
-    var chips = state.history.slice(-8).reverse();
-    el.historyChips.innerHTML = chips.map(function (h) {
-      return '<span class="chip">' + escapeHtml(h.label) + "</span>";
-    }).join("");
-  }
-
+  // --- Вращение ---
   function spin() {
     if (isSpinning) return;
     var n = state.segments.length;
-    if (n < 2) { showNotice("Добавьте минимум два сегмента"); return; }
+    if (n < 2) { showNotice("Добавьте минимум двух участников"); return; }
 
-    var blocked = blockedLabels();
-    var pool = [];
-    for (var i = 0; i < n; i++) {
-      if (!blocked[state.segments[i]]) pool.push({ s: state.segments[i], i: i });
-    }
-    var fallback = false;
-    if (pool.length === 0) {
-      // Все в периоде запрета — берём тех, кто выпадал раньше всех (естественный цикл).
-      var oldest = Infinity;
-      for (i = 0; i < n; i++) {
-        var t = state.lastDrawn[state.segments[i]] || 0;
-        if (t < oldest) oldest = t;
-      }
-      for (i = 0; i < n; i++) {
-        if ((state.lastDrawn[state.segments[i]] || 0) === oldest) {
-          pool.push({ s: state.segments[i], i: i });
-        }
-      }
-      fallback = true;
-    }
-    var pick = pool[Math.floor(Math.random() * pool.length)];
-
+    var w = currentWinner();
     var sliceAngle = 360 / n;
-    var mid = (pick.i + 0.5) * sliceAngle;
+    var mid = (w.index + 0.5) * sliceAngle;
     var curMod = ((currentRotation % 360) + 360) % 360;
     var delta = (360 - ((curMod + mid) % 360)) % 360;
-    delta += (Math.random() - 0.5) * sliceAngle * 0.7;
+    delta += (Math.random() - 0.5) * sliceAngle * 0.5;
     var finalRotation = currentRotation + 5 * 360 + delta;
 
     isSpinning = true;
@@ -502,15 +429,14 @@
       finished = true;
       isSpinning = false;
       updateSpinButton();
-      recordWin(pick.s);
-      celebrate();
-      state.highlight = pick.i;
+      el.resultValue.textContent = caption();
+      highlightIndex = w.index;
       renderWheel(false);
+      celebrate();
       setTimeout(function () {
-        state.highlight = null;
+        highlightIndex = null;
         renderWheel(false);
       }, 2500);
-      if (fallback) showNotice("Период покрыл все значения — выпадает самый «отдохнувший»");
     }
     el.wheel.addEventListener("transitionend", finish, { once: true });
     setTimeout(function () { finish(); }, 4700);
@@ -522,7 +448,7 @@
     var lower = name.toLowerCase();
     for (var i = 0; i < state.segments.length; i++) {
       if (state.segments[i].toLowerCase() === lower) {
-        showNotice("Такой сегмент уже есть");
+        showNotice("Такой участник уже есть");
         return;
       }
     }
@@ -538,33 +464,9 @@
     renderWheel(true);
   }
 
-  function readSettings() {
-    state.mode = el.modeSelect.value;
-    state.spins = Math.max(0, parseInt(el.spinsInput.value, 10) || 0);
-    state.timeValue = Math.max(1, parseInt(el.timeValue.value, 10) || 1);
-    state.timeUnit = el.timeUnit.value;
-  }
-
-  function syncFields() {
-    var time = state.mode === "time";
-    el.spinsField.classList.toggle("hidden", time);
-    el.timeField.classList.toggle("hidden", !time);
-  }
-
   function populateControls() {
     el.titleInput.value = state.title;
-    el.modeSelect.value = state.mode;
-    el.spinsInput.value = state.spins;
-    el.timeValue.value = state.timeValue;
-    el.timeUnit.value = state.timeUnit;
-    syncFields();
     applyTitle();
-  }
-
-  function onSettingsChange() {
-    readSettings();
-    save();
-    renderWheel(false);
   }
 
   el.addBtn.addEventListener("click", addSegment);
@@ -576,35 +478,23 @@
     if (btn) removeSegment(parseInt(btn.getAttribute("data-index"), 10));
   });
   el.spinBtn.addEventListener("click", spin);
-  el.modeSelect.addEventListener("change", onSettingsChange);
-  el.spinsInput.addEventListener("change", onSettingsChange);
-  el.timeValue.addEventListener("change", onSettingsChange);
-  el.timeUnit.addEventListener("change", onSettingsChange);
   el.titleInput.addEventListener("change", function () {
     state.title = el.titleInput.value.trim() || "🎡 Колесо фортуны";
     applyTitle();
     save();
   });
-  el.clearHistory.addEventListener("click", function () {
-    state.history = [];
-    state.lastDrawn = {};
-    save();
-    renderWheel(false);
-    renderResult();
-    showNotice("История очищена, запреты сняты");
-  });
   el.resetAll.addEventListener("click", function () {
-    if (!confirm("Удалить все сегменты, настройки и историю?")) return;
+    if (!confirm("Сбросить список участников и заголовок к значениям по умолчанию?")) return;
     try { localStorage.removeItem(STORAGE_KEY); } catch (e) { /* ignore */ }
     state = defaultState();
+    highlightIndex = null;
     populateControls();
     renderWheel(true);
-    renderResult();
+    el.resultValue.textContent = "Крутите колесо";
   });
 
   populateControls();
   renderWheel(true);
-  renderResult();
 })();
 </script>
 </body>
